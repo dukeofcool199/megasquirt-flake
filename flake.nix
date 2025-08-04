@@ -19,19 +19,56 @@
           stripRoot = false;
         };
 
-        tsdashImg = pkgs.fetchurl {
-          url =
-            "https://www.efianalytics.com/TSDash/download/2022-10-19_TSDash_Reference.img.gz";
-          sha256 = "sha256-u8+VgSJ9scM2PZ1uue8yGafriZAK9oTPXkUoF/icxQ8=";
-        };
+        tsdashImg = with pkgs;
+          stdenv.mkDerivation {
+            name = "tsdash-img";
+
+            src = fetchurl {
+              url =
+                "https://www.efianalytics.com/TSDash/download/2022-10-19_TSDash_Reference.img.gz";
+              sha256 = "sha256-u8+VgSJ9scM2PZ1uue8yGafriZAK9oTPXkUoF/icxQ8=";
+            };
+
+            nativeBuildInputs = [ gzip ];
+
+            unpackPhase = ''
+              mkdir -p $out
+              gunzip -c $src > $out/tsdash.img
+            '';
+          };
+        run-emulator =
+          pkgs.callPackage ./emulator/default.nix { img = tsdashImg; };
       in {
         packages = {
-          emulator =
-            pkgs.callPackage ./emulator/default.nix { img = tsdashImg; };
+          emulator = run-emulator;
+
+          tunerstudio = with pkgs;
+            stdenv.mkDerivation rec {
+              name = "tuner-studio";
+              pname = "TunerStudio";
+              version = "3.1.08";
+              src = fetchTarball {
+                url =
+                  "https://www.tunerstudio.com/downloads2/TunerStudioMS_v3.2.03.tar.gz";
+                sha256 = "1vr7h7hr8sg4jw3xpwhrs090026bpd85pvgvwz1542yiwdsrc5i7";
+              };
+              buildInputs = [ sd jdk ];
+              patchPhase = ''
+                sd 'java' '${jdk}/bin/java' ./TunerStudio.sh
+              '';
+              installPhase = ''
+                mkdir -p $out/bin
+                cp -r $src/* $out/bin
+                mv $out/bin/TunerStudio.sh $out/bin/${pname}
+                chmod 777 $out/bin/${pname}
+              '';
+
+            };
 
         };
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+            run-emulator
             bashInteractive
             qemu_full
             virt-manager
