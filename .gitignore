@@ -2,3 +2,4 @@
 deps
 result
 .crush
+nixos.qcow2

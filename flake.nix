@@ -1,13 +1,22 @@
 {
   description = "a flake for all things megasquirt or something like that";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  inputs.systems.url = "github:nix-systems/default";
-  inputs.flake-utils = {
-    url = "github:numtide/flake-utils";
-    inputs.systems.follows = "systems";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    systems.url = "github:nix-systems/default";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.systems.follows = "systems";
+    };
+    hardware = { url = "github:nixos/nixos-hardware"; };
+
+    generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
-  outputs = { nixpkgs, flake-utils, ... }:
+  outputs = { nixpkgs, flake-utils, hardware, generators, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -32,10 +41,11 @@
               gunzip -c $src > $out/tsdash.img
             '';
           };
+
         run-emulator =
           pkgs.callPackage ./emulator/default.nix { img = tsdashImg; };
       in {
-        packages = {
+        packages = rec {
           emulator = run-emulator;
           tsdashAppExe = pkgs.writeShellApplication {
             name = "TSdash";
@@ -44,6 +54,27 @@
               cd ${tsdashApp}
               java -jar TSDash.jar
             '';
+          };
+          vm = generators.nixosGenerate {
+            system = "x86_64-linux";
+            format = "vm";
+            modules = [
+              {
+                users.users.tuner = {
+                  name = "tuner";
+                  isNormalUser = true;
+                  initialPassword = "tuner";
+                  enable = true;
+                  extraGroups = [ "wheel" ];
+                };
+
+              }
+              {
+                environment.systemPackages = [ tsdashAppExe pkgs.kitty ];
+                programs.hyprland.enable = true;
+              }
+
+            ];
           };
 
           tunerstudio = with pkgs;
