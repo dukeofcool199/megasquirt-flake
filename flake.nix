@@ -14,9 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    home-manager.url = "github:nix-community/home-manager";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { nixpkgs, flake-utils, hardware, generators, ... }:
+  outputs = { nixpkgs, flake-utils, hardware, generators, home-manager, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -42,6 +44,15 @@
             '';
           };
 
+        tsdashAppExe = pkgs.writeShellApplication {
+          name = "TSdash";
+          runtimeInputs = [ pkgs.jre8 ];
+          text = ''
+            cd ${tsdashApp}
+            java -jar TSDash.jar
+          '';
+        };
+
         modules = [
           {
             users.users.tuner = {
@@ -53,21 +64,18 @@
             };
 
           }
+          { nix.settings = { experimental-features = "nix-command flakes"; }; }
           {
             environment.systemPackages = with pkgs; [ tsdashAppExe kitty wofi ];
-            programs.hyprland.enable = true;
+            programs.hyprland = {
+              enable = true;
+              withUWSM = true;
+            };
           }
         ];
       in {
-        packages = rec {
-          tsdashAppExe = pkgs.writeShellApplication {
-            name = "TSdash";
-            runtimeInputs = [ pkgs.jre8 ];
-            text = ''
-              cd ${tsdashApp}
-              java -jar TSDash.jar
-            '';
-          };
+        packages = {
+          inherit tsdashAppExe;
           vm = generators.nixosGenerate {
             inherit system modules;
 
@@ -100,7 +108,6 @@
         };
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            run-emulator
             bashInteractive
             qemu_full
             virt-manager
