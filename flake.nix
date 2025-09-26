@@ -44,14 +44,15 @@
 
         tsdashAppExe = pkgs.writeShellApplication {
           name = "TSdash";
-          runtimeInputs = [ pkgs.jre8 ];
+          runtimeInputs = [ pkgs.jdk11 ];
           text = ''
             cd ${tsdashApp}
-            java -jar TSDash.jar
+            LIBGL_ALWAYS_SOFTWARE=1 java -jar TSDash.jar
           '';
         };
 
         modules = [
+          { system.stateVersion = "25.05"; }
           {
             services.greetd = {
               enable = true;
@@ -63,7 +64,6 @@
                 default_session = initial_session;
               };
             };
-
           }
           {
             users.users.tuner = {
