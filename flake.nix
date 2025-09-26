@@ -53,6 +53,19 @@
 
         modules = [
           {
+            services.greetd = {
+              enable = true;
+              settings = rec {
+                initial_session = {
+                  command = "Hyprland --config ${./hyprland.conf}";
+                  user = "tuner";
+                };
+                default_session = initial_session;
+              };
+            };
+
+          }
+          {
             users.users.tuner = {
               name = "tuner";
               isNormalUser = true;
@@ -83,6 +96,12 @@
             }];
 
             format = "vm";
+          };
+          rpi-img = generators.nixosGenerate {
+            system = "aarch64-linux";
+            modules = modules ++ [ hardware.nixosModules.raspberry-pi-4 ];
+
+            format = "sd-aarch64";
           };
 
           tunerstudio = with pkgs;
