@@ -8,12 +8,10 @@
       inputs.systems.follows = "systems";
     };
     hardware = { url = "github:nixos/nixos-hardware"; };
-
     generators = {
       url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -77,7 +75,12 @@
         packages = {
           inherit tsdashAppExe;
           vm = generators.nixosGenerate {
-            inherit system modules;
+            inherit system;
+            modules = modules ++ [{
+              services.qemuGuest.enable = true;
+              services.spice-vdagentd.enable =
+                true; # enable copy and paste between host and guest
+            }];
 
             format = "vm";
           };
@@ -107,18 +110,7 @@
 
         };
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            bashInteractive
-            qemu_full
-            virt-manager
-            virt-manager-qt
-          ];
-          shellHook = ''
-            rm -rf deps
-            mkdir -p deps
-            ln -s ${tsdashImg} ./deps/tsdash
-            ln -s ${tsdashApp} ./deps/tsdash-app
-          '';
+          packages = with pkgs; [ qemu_full virt-manager virt-manager-qt ];
         };
       });
 }
