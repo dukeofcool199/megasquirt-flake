@@ -42,11 +42,24 @@
             '';
           };
 
-        run-emulator =
-          pkgs.callPackage ./emulator/default.nix { img = tsdashImg; };
+        modules = [
+          {
+            users.users.tuner = {
+              name = "tuner";
+              isNormalUser = true;
+              initialPassword = "tuner";
+              enable = true;
+              extraGroups = [ "wheel" ];
+            };
+
+          }
+          {
+            environment.systemPackages = with pkgs; [ tsdashAppExe kitty wofi ];
+            programs.hyprland.enable = true;
+          }
+        ];
       in {
         packages = rec {
-          emulator = run-emulator;
           tsdashAppExe = pkgs.writeShellApplication {
             name = "TSdash";
             runtimeInputs = [ pkgs.jre8 ];
@@ -56,25 +69,9 @@
             '';
           };
           vm = generators.nixosGenerate {
-            system = "x86_64-linux";
+            inherit system modules;
+
             format = "vm";
-            modules = [
-              {
-                users.users.tuner = {
-                  name = "tuner";
-                  isNormalUser = true;
-                  initialPassword = "tuner";
-                  enable = true;
-                  extraGroups = [ "wheel" ];
-                };
-
-              }
-              {
-                environment.systemPackages = [ tsdashAppExe pkgs.kitty ];
-                programs.hyprland.enable = true;
-              }
-
-            ];
           };
 
           tunerstudio = with pkgs;
