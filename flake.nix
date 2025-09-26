@@ -18,19 +18,15 @@
           sha256 = "sha256-GL4III3SPXN28KXPQaPWMU4+kDdwB+Ig/+ABPRpX03g=";
           stripRoot = false;
         };
-
         tsdashImg = with pkgs;
           stdenv.mkDerivation {
             name = "tsdash-img";
-
             src = fetchurl {
               url =
                 "https://www.efianalytics.com/TSDash/download/2022-10-19_TSDash_Reference.img.gz";
               sha256 = "sha256-u8+VgSJ9scM2PZ1uue8yGafriZAK9oTPXkUoF/icxQ8=";
             };
-
             nativeBuildInputs = [ gzip ];
-
             unpackPhase = ''
               mkdir -p $out
               gunzip -c $src > $out/tsdash.img
@@ -41,6 +37,14 @@
       in {
         packages = {
           emulator = run-emulator;
+          tsdashAppExe = pkgs.writeShellApplication {
+            name = "TSdash";
+            runtimeInputs = [ pkgs.jre8 ];
+            text = ''
+              cd ${tsdashApp}
+              java -jar TSDash.jar
+            '';
+          };
 
           tunerstudio = with pkgs;
             stdenv.mkDerivation rec {
