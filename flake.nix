@@ -51,20 +51,52 @@
           '';
         };
 
+        tunerstudio = with pkgs;
+          stdenv.mkDerivation rec {
+            name = "tuner-studio";
+            pname = "TunerStudio";
+            version = "3.1.08";
+            src = fetchTarball {
+              url =
+                "https://www.tunerstudio.com/downloads2/TunerStudioMS_v3.2.03.tar.gz";
+              sha256 = "1vr7h7hr8sg4jw3xpwhrs090026bpd85pvgvwz1542yiwdsrc5i7";
+            };
+            buildInputs = [ sd jdk ];
+            patchPhase = ''
+              sd 'java' '${jdk}/bin/java' ./TunerStudio.sh
+            '';
+            installPhase = ''
+              mkdir -p $out/bin
+              cp -r $src/* $out/bin
+              mv $out/bin/TunerStudio.sh $out/bin/${pname}
+              chmod 777 $out/bin/${pname}
+            '';
+          };
+
         modules = [
           {
-            services.greetd = {
+            services.xserver = {
               enable = true;
-              settings = rec {
-                initial_session = {
-                  command = "Hyprland --config ${./hyprland.conf}";
-                  user = "tuner";
-                };
-                default_session = initial_session;
+              displayManager.startx = {
+                enable = true;
+                generateScript = true;
+                extraCommands = "exec i3";
+
               };
+              windowManager.i3.enable = true;
+              windowManager.i3.configFile = ./i3.conf;
             };
 
+            # still needed for autologin:
+            services.getty.autologinUser = "tuner";
+            programs.bash.loginShellInit = ''
+              if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+                exec startx
+              fi
+            '';
+            programs.neovim.enable = true;
           }
+
           {
             users.users.tuner = {
               name = "tuner";
@@ -77,7 +109,12 @@
           }
           { nix.settings = { experimental-features = "nix-command flakes"; }; }
           {
-            environment.systemPackages = with pkgs; [ tsdashAppExe kitty wofi ];
+            environment.systemPackages = with pkgs; [
+              tunerstudio
+              tsdashAppExe
+              kitty
+              wofi
+            ];
             programs.hyprland = {
               enable = true;
               withUWSM = true;
@@ -104,28 +141,7 @@
             format = "sd-aarch64";
           };
 
-          tunerstudio = with pkgs;
-            stdenv.mkDerivation rec {
-              name = "tuner-studio";
-              pname = "TunerStudio";
-              version = "3.1.08";
-              src = fetchTarball {
-                url =
-                  "https://www.tunerstudio.com/downloads2/TunerStudioMS_v3.2.03.tar.gz";
-                sha256 = "1vr7h7hr8sg4jw3xpwhrs090026bpd85pvgvwz1542yiwdsrc5i7";
-              };
-              buildInputs = [ sd jdk ];
-              patchPhase = ''
-                sd 'java' '${jdk}/bin/java' ./TunerStudio.sh
-              '';
-              installPhase = ''
-                mkdir -p $out/bin
-                cp -r $src/* $out/bin
-                mv $out/bin/TunerStudio.sh $out/bin/${pname}
-                chmod 777 $out/bin/${pname}
-              '';
-
-            };
+          tunerstudio = tunerstudio;
 
         };
         devShells.default = pkgs.mkShell {
