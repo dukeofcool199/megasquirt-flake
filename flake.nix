@@ -72,31 +72,43 @@
               chmod 777 $out/bin/${pname}
             '';
           };
+        i3mod = {
+          services.xserver = {
+            enable = true;
+            displayManager.startx = {
+              enable = true;
+              generateScript = true;
+              extraCommands = "exec i3";
+
+            };
+            windowManager.i3.enable = true;
+            windowManager.i3.configFile = ./i3.conf;
+          };
+
+          # still needed for autologin:
+          services.getty.autologinUser = "tuner";
+          programs.bash.loginShellInit = ''
+            if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+              exec startx
+            fi
+          '';
+          programs.neovim.enable = true;
+        };
 
         modules = [
           {
-            services.xserver = {
+            programs.sway = { enable = true; };
+            services.greetd = {
               enable = true;
-              displayManager.startx = {
-                enable = true;
-                generateScript = true;
-                extraCommands = "exec i3";
-
+              settings = rec {
+                initial_session = {
+                  command = "sway --config ${./i3.conf}";
+                  user = "tuner";
+                };
+                default_session = initial_session;
               };
-              windowManager.i3.enable = true;
-              windowManager.i3.configFile = ./i3.conf;
             };
-
-            # still needed for autologin:
-            services.getty.autologinUser = "tuner";
-            programs.bash.loginShellInit = ''
-              if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
-                exec startx
-              fi
-            '';
-            programs.neovim.enable = true;
           }
-
           {
             users.users.tuner = {
               name = "tuner";
