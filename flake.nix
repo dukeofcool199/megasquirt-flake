@@ -148,8 +148,18 @@
           };
           rpi-img = generators.nixosGenerate {
             system = "aarch64-linux";
+            specialArgs = {
+              pkgs = import nixpkgs {
+                inherit system;
+                overlays = [
+                  (final: super: {
+                    makeModulesClosure = x:
+                      super.makeModulesClosure (x // { allowMissing = true; });
+                  })
+                ];
+              };
+            };
             modules = modules ++ [ hardware.nixosModules.raspberry-pi-4 ];
-
             format = "sd-aarch64";
           };
 
@@ -157,7 +167,13 @@
 
         };
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [ qemu_full virt-manager virt-manager-qt ];
+          packages = with pkgs; [
+            qemu_full
+            virt-manager
+            virt-manager-qt
+            rpi-imager
+            zstd
+          ];
         };
       });
 }
