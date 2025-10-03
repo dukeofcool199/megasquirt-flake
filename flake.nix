@@ -174,6 +174,11 @@
             rpi-imager
             zstd
           ];
+          shellHook = ''
+            rm -rf deps
+            mkdir -p deps
+            ln -s ${tsdashImg}/tsdash.img ./deps
+          '';
         };
       });
 }
